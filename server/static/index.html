@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EyeTracker — Fatigue Monitor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+    <!-- Webcam layer -->
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="capture"></canvas>
+
+    <!-- Live HUD -->
+    <div id="hud">
+        <div class="hud-header">FATIGUE MONITOR</div>
+        <div class="hud-score">Score: <span id="score">0</span><span class="hud-max">/100</span></div>
+        <div class="hud-divider"></div>
+        <div class="hud-row"><span class="hud-label">Alert Level</span><span id="alert-level" class="hud-value">0</span></div>
+        <div class="hud-row"><span class="hud-label">Blinks (60s)</span><span id="blink-count" class="hud-value">0</span></div>
+        <div class="hud-row"><span class="hud-label">Eye State</span><span id="eye-state" class="hud-value dim">—</span></div>
+        <div class="hud-divider"></div>
+        <div class="hud-section">LIVE ANALYTICS</div>
+        <div class="hud-row"><span class="hud-label">Blink Rate Pts</span><span id="blink-pts" class="hud-value">0</span></div>
+        <div class="hud-row"><span class="hud-label">Heavy Eyes Pts</span><span id="heavy-pts" class="hud-value">0</span></div>
+        <div class="hud-row"><span class="hud-label">Staring Pts</span><span id="staring-pts" class="hud-value">0</span></div>
+        <div class="hud-divider"></div>
+        <div class="hud-row"><span class="hud-label">Next Update</span><span id="countdown" class="hud-value">60s</span></div>
+        <div id="connection-status" class="status-dot disconnected" title="WebSocket connection"></div>
+    </div>
+
+    <!-- Alert overlay (live mode) -->
+    <div id="alert-overlay" class="hidden" data-level="0">
+        <div id="alert-box">
+            <div id="alert-title">FATIGUE ALERT</div>
+            <div id="alert-message"></div>
+            <div id="alert-countdown"></div>
+        </div>
+    </div>
+
+    <!-- ── Upload / analysis view ────────────────────────── -->
+    <div id="upload-view" class="hidden">
+        <div id="upload-header">
+            <button id="back-btn">&#8592; BACK</button>
+            <span id="upload-heading">VIDEO ANALYSIS</span>
+        </div>
+
+        <div id="upload-body">
+
+            <!-- Drop zone -->
+            <div id="drop-zone" role="button" tabindex="0" aria-label="Select video file">
+                <input type="file" id="file-input" accept="video/*">
+                <div id="drop-content">
+                    <div id="drop-arrow">&#8679;</div>
+                    <div id="drop-main">Drop video file here</div>
+                    <div id="drop-sub">or click to browse &nbsp;·&nbsp; MP4, AVI, MOV</div>
+                </div>
+                <div id="drop-selected" class="hidden">
+                    <div id="selected-icon">&#9654;</div>
+                    <div id="selected-name"></div>
+                    <div id="selected-size"></div>
+                    <div id="drop-change">drop or click to change</div>
+                </div>
+            </div>
+
+            <!-- Video preview (visible after file is picked) -->
+            <div id="preview-section" class="hidden">
+                <div id="preview-wrap">
+                    <video id="preview-video" muted playsinline preload="metadata"></video>
+                    <div id="frame-badge" class="hidden">Frame <span id="frame-badge-num">0</span></div>
+                </div>
+            </div>
+
+            <!-- Analyze button -->
+            <button id="analyze-btn" disabled>ANALYZE VIDEO</button>
+
+            <!-- Live analysis panel (streaming) -->
+            <div id="live-panel" class="hidden">
+                <div id="live-progress-track">
+                    <div id="live-progress-fill"></div>
+                </div>
+                <div id="live-progress-label">
+                    Frame <span id="live-frame">0</span> / <span id="live-total">—</span>
+                </div>
+                <div id="live-stats-row">
+                    <div class="live-stat">
+                        <span class="live-val" id="live-score">0</span>
+                        <span class="live-lbl">Score</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-val" id="live-blinks">0</span>
+                        <span class="live-lbl">Blinks</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-val dim" id="live-eye">—</span>
+                        <span class="live-lbl">Eye State</span>
+                    </div>
+                    <div class="live-stat">
+                        <span class="live-val" id="live-level">0</span>
+                        <span class="live-lbl">Alert Level</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error -->
+            <div id="error-box" class="hidden">
+                <span id="error-text"></span>
+            </div>
+
+            <!-- Results -->
+            <div id="results-section" class="hidden">
+                <div class="section-label">RESULTS</div>
+                <div id="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-num" id="res-score">—</div>
+                        <div class="stat-lbl">Final Score</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="res-blinks">—</div>
+                        <div class="stat-lbl">Total Blinks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-num" id="res-frames">—</div>
+                        <div class="stat-lbl">Frames Analyzed</div>
+                    </div>
+                    <div class="stat-box" id="res-level-box">
+                        <div class="stat-num" id="res-level">—</div>
+                        <div class="stat-lbl">Alert Level</div>
+                    </div>
+                </div>
+
+                <div class="section-label" style="margin-top:32px">FATIGUE SCORE OVER TIME</div>
+                <div id="chart-wrap">
+                    <svg id="score-chart" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+
+                <div id="alert-timeline" class="hidden">
+                    <div class="section-label" style="margin-top:28px">ALERT EVENTS</div>
+                    <div id="alert-event-list"></div>
+                </div>
+
+                <button id="reset-btn">ANALYZE ANOTHER FILE</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Start / mode selection ────────────────────────── -->
+    <div id="start-screen">
+        <div id="start-inner">
+            <div id="start-logo">EYETRACKER</div>
+            <div id="start-tagline">Fatigue detection system</div>
+            <div id="mode-grid">
+                <div class="mode-card" id="card-live" tabindex="0" role="button">
+                    <div class="card-icon">&#9673;</div>
+                    <div class="card-title">LIVE WEBCAM</div>
+                    <div class="card-desc">Real-time fatigue monitoring. Alerts fire the moment thresholds are crossed.</div>
+                    <div class="card-hint">Camera permission required</div>
+                </div>
+                <div class="mode-card" id="card-upload" tabindex="0" role="button">
+                    <div class="card-icon">&#8679;</div>
+                    <div class="card-title">ANALYZE VIDEO</div>
+                    <div class="card-desc">Upload a recorded video for a live frame-by-frame fatigue report.</div>
+                    <div class="card-hint">Supports MP4, AVI, MOV</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
