@@ -19,6 +19,17 @@ from core.model_manager import ensure_model
 
 _model_path: str = ""
 _executor = ThreadPoolExecutor(max_workers=4)
+VIDEO_FRAME_STRIDE = 3
+VIDEO_MAX_WIDTH = 640
+
+
+def _prepare_video_frame(frame: np.ndarray) -> np.ndarray:
+    height, width = frame.shape[:2]
+    if width <= VIDEO_MAX_WIDTH:
+        return frame
+
+    new_height = max(1, int(height * (VIDEO_MAX_WIDTH / width)))
+    return cv2.resize(frame, (VIDEO_MAX_WIDTH, new_height), interpolation=cv2.INTER_AREA)
 
 
 @asynccontextmanager
@@ -75,9 +86,18 @@ def _process_video_sync(video_path: str) -> dict:
     frame_num = 0
 
     while cap.isOpened():
-        ok, frame = cap.read()
+        ok = cap.grab()
         if not ok:
             break
+        if frame_num % VIDEO_FRAME_STRIDE != 0:
+            frame_num += 1
+            continue
+
+        ok, frame = cap.retrieve()
+        if not ok:
+            break
+
+        frame = _prepare_video_frame(frame)
         timestamp_ms = int(frame_num * (1000.0 / fps))
         state = tracker.process_frame(frame, timestamp_ms)
         frames_data.append(asdict(state))
@@ -121,9 +141,18 @@ async def analyze_stream(file: UploadFile = File(...)):
             ).result()
 
             while cap.isOpened():
-                ok, frame = cap.read()
+                ok = cap.grab()
                 if not ok:
                     break
+                if frame_num % VIDEO_FRAME_STRIDE != 0:
+                    frame_num += 1
+                    continue
+
+                ok, frame = cap.retrieve()
+                if not ok:
+                    break
+
+                frame = _prepare_video_frame(frame)
                 timestamp_ms = int(frame_num * (1000.0 / fps))
                 state = tracker.process_frame(frame, timestamp_ms)
                 d = asdict(state)
@@ -131,7 +160,7 @@ async def analyze_stream(file: UploadFile = File(...)):
                 d["frame_index"] = frame_num
                 frames_data.append(d)
 
-                if frame_num % 5 == 0:  # send every 5th frame to keep stream manageable
+                if len(frames_data) % 2 == 1:  # keep the stream responsive on low-CPU hosts
                     asyncio.run_coroutine_threadsafe(
                         queue.put(json.dumps(d) + "\n"), loop
                     ).result()
