@@ -8,6 +8,6 @@ services:
     healthCheckPath: /
     envVars:
       - key: VIDEO_FRAME_STRIDE
-        value: "8"
+        value: "12"
       - key: VIDEO_MAX_WIDTH
-        value: "480"
+        value: "360"

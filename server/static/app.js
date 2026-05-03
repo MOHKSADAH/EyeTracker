@@ -228,6 +228,9 @@ function setFile(file) {
     if (previewObjUrl) URL.revokeObjectURL(previewObjUrl);
     previewObjUrl = URL.createObjectURL(file);
     previewVideo.src = previewObjUrl;
+    previewVideo.currentTime = 0;
+    previewVideo.load();
+    previewVideo.play().catch(() => {});
     previewSection.classList.remove('hidden');
 
     analyzeBtn.disabled = false;
