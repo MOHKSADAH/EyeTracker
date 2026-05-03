@@ -6,3 +6,8 @@ services:
     autoDeploy: true
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
+    envVars:
+      - key: VIDEO_FRAME_STRIDE
+        value: "8"
+      - key: VIDEO_MAX_WIDTH
+        value: "480"

@@ -19,8 +19,8 @@ from core.model_manager import ensure_model
 
 _model_path: str = ""
 _executor = ThreadPoolExecutor(max_workers=4)
-VIDEO_FRAME_STRIDE = 3
-VIDEO_MAX_WIDTH = 640
+VIDEO_FRAME_STRIDE = max(1, int(os.getenv("VIDEO_FRAME_STRIDE", "8")))
+VIDEO_MAX_WIDTH = max(160, int(os.getenv("VIDEO_MAX_WIDTH", "480")))
 
 
 def _prepare_video_frame(frame: np.ndarray) -> np.ndarray:
