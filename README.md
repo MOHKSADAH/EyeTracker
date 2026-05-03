@@ -2,6 +2,8 @@
 
 Real-time driver/user fatigue detection via webcam. Uses MediaPipe face landmarks to track blink rate, eye closure duration, and staring patterns. Computes a rolling fatigue score and shows progressive alerts in the browser.
 
+<img width="2319" height="1312" alt="EYETRACJER" src="https://github.com/user-attachments/assets/18580afb-32b0-4dc8-9dfb-98f04c7e6f48" />
+
 ---
 
 ## Table of Contents
