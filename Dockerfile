@@ -4,6 +4,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     libgl1 \
+    libgles2-mesa \
+    libegl1 \
     libsm6 \
     libxext6 \
     libxrender-dev \
