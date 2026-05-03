@@ -24,7 +24,10 @@ const frameBadge     = document.getElementById('frame-badge');
 const frameBadgeNum  = document.getElementById('frame-badge-num');
 const analyzeBtn     = document.getElementById('analyze-btn');
 const livePanel      = document.getElementById('live-panel');
+const liveStatusDot  = document.getElementById('live-status-dot');
+const liveStatusText = document.getElementById('live-status-text');
 const liveProgressFill = document.getElementById('live-progress-fill');
+const liveProgressPercent = document.getElementById('live-progress-percent');
 const liveFrame      = document.getElementById('live-frame');
 const liveTotal      = document.getElementById('live-total');
 const liveScore      = document.getElementById('live-score');
@@ -238,6 +241,7 @@ function setFile(file) {
     resultsSection.classList.add('hidden');
     livePanel.classList.add('hidden');
     frameBadge.classList.add('hidden');
+    setAnalysisStatus('Ready to analyze', 'idle');
 }
 
 function formatBytes(bytes) {
@@ -259,12 +263,14 @@ analyzeBtn.addEventListener('click', async () => {
     liveProgressFill.style.width = '0%';
     liveFrame.textContent  = '0';
     liveTotal.textContent  = '—';
+    liveProgressPercent.textContent = '0%';
     liveScore.textContent  = '0';
     liveBlinks.textContent = '0';
     liveEye.textContent    = '—';
     liveLevel.textContent  = '0';
     livePanel.classList.remove('hidden');
     frameBadge.classList.remove('hidden');
+    setAnalysisStatus('Uploading video...', 'loading');
 
     try {
         await streamAnalysis(currentFile);
@@ -272,6 +278,7 @@ analyzeBtn.addEventListener('click', async () => {
         livePanel.classList.add('hidden');
         frameBadge.classList.add('hidden');
         showError(err.message);
+        setAnalysisStatus('Analysis failed', 'error');
         analyzeBtn.disabled = false;
     }
 });
@@ -280,8 +287,12 @@ async function streamAnalysis(file) {
     const form = new FormData();
     form.append('file', file);
 
+    setAnalysisStatus('Sending video to server...', 'loading');
+
     const resp = await fetch('/analyze-stream', { method: 'POST', body: form });
     if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+
+    setAnalysisStatus('Analyzing frames...', 'processing');
 
     const reader  = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -315,12 +326,14 @@ function handleStreamData(data) {
         streamTotal = data.total_frames;
         streamFps   = data.fps || 30;
         liveTotal.textContent = streamTotal.toLocaleString();
+        setAnalysisStatus(`Analyzing frame 0 of ${streamTotal.toLocaleString()}`, 'processing');
         return;
     }
 
     if (data.type === 'frame') {
         streamFrames.push(data);
         updateLivePanel(data);
+        setAnalysisStatus(`Analyzing frame ${data.frame_index.toLocaleString()} of ${streamTotal.toLocaleString()}`, 'processing');
         seekPreview(data.frame_index);
         return;
     }
@@ -329,6 +342,8 @@ function handleStreamData(data) {
         // Snap progress to 100%
         liveProgressFill.style.width = '100%';
         liveFrame.textContent = streamTotal.toLocaleString();
+        liveProgressPercent.textContent = '100%';
+        setAnalysisStatus('Analysis complete', 'done');
 
         // Short delay so user sees the 100% bar, then show results
         setTimeout(() => {
@@ -347,7 +362,9 @@ function handleStreamData(data) {
 
 function updateLivePanel(frame) {
     if (streamTotal > 0) {
-        liveProgressFill.style.width = ((frame.frame_index / streamTotal) * 100).toFixed(1) + '%';
+        const percent = Math.min(100, ((frame.frame_index + 1) / streamTotal) * 100);
+        liveProgressFill.style.width = percent.toFixed(1) + '%';
+        liveProgressPercent.textContent = percent.toFixed(0) + '%';
     }
     liveFrame.textContent  = frame.frame_index.toLocaleString();
     liveScore.textContent  = Math.round(frame.score);
@@ -431,6 +448,11 @@ function showError(msg) {
     errorBox.classList.remove('hidden');
 }
 
+function setAnalysisStatus(text, kind) {
+    liveStatusText.textContent = text;
+    liveStatusDot.dataset.kind = kind;
+}
+
 // ── Reset ─────────────────────────────────────────────────────────────────
 
 resetBtn.addEventListener('click', resetUploadState);
@@ -455,6 +477,8 @@ function resetUploadState() {
     errorBox.classList.add('hidden');
     resultsSection.classList.add('hidden');
     liveProgressFill.style.width = '0%';
+    liveProgressPercent.textContent = '0%';
+    setAnalysisStatus('Idle', 'idle');
     streamFrames = [];
 }
 

@@ -78,11 +78,16 @@
 
             <!-- Live analysis panel (streaming) -->
             <div id="live-panel" class="hidden">
+                <div id="live-status-bar">
+                    <span id="live-status-dot"></span>
+                    <span id="live-status-text">Idle</span>
+                </div>
                 <div id="live-progress-track">
                     <div id="live-progress-fill"></div>
                 </div>
                 <div id="live-progress-label">
                     Frame <span id="live-frame">0</span> / <span id="live-total">—</span>
+                    <span id="live-progress-percent">0%</span>
                 </div>
                 <div id="live-stats-row">
                     <div class="live-stat">

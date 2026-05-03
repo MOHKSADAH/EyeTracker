@@ -285,6 +285,33 @@ body {
 #live-panel { margin-bottom: 28px; }
 #live-panel.hidden { display: none; }
 
+#live-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+}
+
+#live-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.04);
+}
+
+#live-status-dot[data-kind="loading"] { background: var(--amber); }
+#live-status-dot[data-kind="processing"] { background: var(--green); }
+#live-status-dot[data-kind="done"] { background: var(--green); }
+#live-status-dot[data-kind="error"] { background: #ef5350; }
+
+#live-status-text {
+    text-transform: uppercase;
+}
+
 #live-progress-track {
     height: 2px;
     background: rgba(255,255,255,0.1);
@@ -298,10 +325,17 @@ body {
     transition: width 0.08s linear;
 }
 #live-progress-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
     font-size: 11px;
     color: var(--text-dim);
     letter-spacing: 0.5px;
     margin-bottom: 14px;
+}
+
+#live-progress-percent {
+    color: var(--text);
 }
 
 #live-stats-row {
